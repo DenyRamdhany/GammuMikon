@@ -1,0 +1,18 @@
+[gammu]
+device = com18:
+connection = at
+
+[smsd]
+device = com18:
+connection = at
+PIN = 1234
+debuglevel = 0
+commtimeout = 30
+sendtimeout = 30
+service = mysql
+checksecurity = 0
+user = root
+password = dancenanta
+pc = localhost
+database = gammu
+driver = native_mysql

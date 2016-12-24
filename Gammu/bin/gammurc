@@ -1,0 +1,4 @@
+[gammu]
+
+device = com18:
+connection = at
