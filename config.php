@@ -1,7 +1,7 @@
 <?php
 	$host = "localhost";
-	$user = "root";
-	$pass = "dancenanta";
+	$user = "anyone";
+	$pass = "anyone";
 	$db = "gammu";
 	
 	mysql_connect($host, $user, $pass) or die (mysql_error());
