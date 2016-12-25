@@ -3,21 +3,21 @@ include("config.php");
 extract($_GET);
 
 switch($f)
-{	case '1' :	warn($rek,$mod,$type);
+{	case '1' :	warn($rek,$mod,$type);		// buat ngirim pesan
 				break;
-	case '2' :	dev_crtl($rek,$mod,$stat);
+	case '2' :	dev_crtl($rek,$mod,$stat);	// buat ngontrol alat
 				break;
-	case '3' :	auto_check($mod);
+	case '3' :	auto_check($mod);			// buat auto check tanggal dll
 				break;
-	case '0' :	test();
+	case '0' :	test();						// fungsi kosong, buat ngetes aja, dapat diabaikan
 				break;
 }
 
 /*	keterangan variabel :
-	$rek 	: nomor rekening
-	$state 	: 0 = mati, else nyala
-	$mod 	: 0 = mode ethernet, else mode sms
-	$type	: tipe pesan, 1=notif, 2=hari H, 3=SP1, 4=SP2
+	$rek 	: nomor rekening sesuai di database
+	$state 	: 0=mati, else nyala
+	$mod 	: 0=mode ethernet, else mode sms
+	$type	: tipe pesan, 1=notif, 2=hari-H, 3=SP1, 4=SP2
 			
 */
 
@@ -51,10 +51,6 @@ function warn($rek,$mod,$type)
 	send_sms($data->phone,$msg);
 }
 
-function send_sms($numb,$msg)
-{	mysql_query("INSERT INTO outbox (DestinationNumber, TextDecoded, CreatorID) VALUES ('$numb', '$msg', 'Gammu')");
-}
-
 function dev_crtl($rek,$mod,$stat)
 { 	$data=mysql_fetch_object(mysql_query("SELECT * FROM billing WHERE NoRek='$rek'"));
 
@@ -65,6 +61,45 @@ function dev_crtl($rek,$mod,$stat)
 	else {	mysql_query("UPDATE billing set status=1 WHERE NoRek LIKE $rek");
 			if($mod) send_sms($data->dev_phone,"on");
 		 }
+}
+
+function auto_check($mod)
+{	$qry=mysql_query("SELECT * FROM billing");
+	$data1=mysql_num_rows($qry);
+	$data2=mysql_num_rows(mysql_query("SELECT * FROM warning"));	
+	
+	if($data2<$data1)
+	 while($data3=mysql_fetch_object($qry))
+		   mysql_query("INSERT INTO warning VALUES('$data3->NoRek','0','0','0')");
+	   
+	$cmonth = date("m"); $cday = date("d");
+	
+	while($bill=mysql_fetch_object($qry))
+	{	$warn=mysql_fetch_object(mysql_query("SELECT * FROM warning WHERE NoRek LIKE '$bill->NoRek'"));
+		
+		if($cday>='20' && abs($cmonth-$bill->month)==1)	//Hari H
+		   if($warn->H1=='0')
+			 {  warn($bill->NoRek,$mod,'2');
+				mysql_query("UPDATE warning SET H1='".$cday."-".$cmonth."',SP2='0' WHERE NoRek LIKE '$bill->NoRek'");
+			 }
+			 
+		if($cday>='20' && abs($cmonth-$bill->month)>=2 && abs($cmonth-$bill->month)<4)	//SP1
+		   if($warn->SP1=='0')
+			 {  warn($bill->NoRek,$mod,'3');
+				mysql_query("UPDATE warning SET SP1='".$cday."-".$cmonth."',H1='0' WHERE NoRek LIKE '$bill->NoRek'");
+			 }
+		
+		if($cday>='20' && abs($cmonth-$bill->month)>=4)	//SP2
+		   if($warn->SP2=='0')
+			 {  warn($bill->NoRek,$mod,'4');
+				mysql_query("UPDATE warning SET SP2='".$cday."-".$cmonth."',SP1='0' WHERE NoRek LIKE '$bill->NoRek'");
+			 }
+	}
+	
+}
+
+function send_sms($numb,$msg)
+{	mysql_query("INSERT INTO outbox (DestinationNumber, TextDecoded, CreatorID) VALUES ('$numb', '$msg', 'Gammu')");
 }
 
 function get_period($rek,$gap)
@@ -101,42 +136,7 @@ function get_period($rek,$gap)
 	return $tgl;
 }
 
-function auto_check($mod)
-{	$qry=mysql_query("SELECT * FROM billing");
-	$data1=mysql_num_rows($qry);
-	$data2=mysql_num_rows(mysql_query("SELECT * FROM warning"));	
-	
-	if($data2<$data1)
-	 while($data3=mysql_fetch_object($qry))
-		   mysql_query("INSERT INTO warning VALUES('$data3->NoRek','0','0','0')");
-	   
-	$cmonth = date("m"); $cday = date("d");
-	
-	while($bill=mysql_fetch_object($qry))
-	{	$warn=mysql_fetch_object(mysql_query("SELECT * FROM warning WHERE NoRek LIKE '$bill->NoRek'"));
-		
-		if($cday>='20' && abs($cmonth-$bill->month)==1)	//Hari H
-		   if($warn->H1=='0')
-			 {  warn($bill->NoRek,$mod,'2');
-				mysql_query("UPDATE warning SET H1='".$cmonth."-".$cday."',SP2='0' WHERE NoRek LIKE '$bill->NoRek'");
-			 }
-			 
-		if($cday>='20' && abs($cmonth-$bill->month)>=2 && abs($cmonth-$bill->month)<4)	//SP1
-		   if($warn->SP1=='0')
-			 {  warn($bill->NoRek,$mod,'3');
-				mysql_query("UPDATE warning SET SP1='".$cmonth."-".$cday."',H1='0' WHERE NoRek LIKE '$bill->NoRek'");
-			 }
-		
-		if($cday>='20' && abs($cmonth-$bill->month)>=4)	//SP2
-		   if($warn->SP2=='0')
-			 {  warn($bill->NoRek,$mod,'4');
-				mysql_query("UPDATE warning SET SP2='".$cmonth."-".$cday."',SP1='0' WHERE NoRek LIKE '$bill->NoRek'");
-			 }
-	}
-	
-}
-
 function test()
-{
+{	
 }
 ?>
